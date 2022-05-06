@@ -1,0 +1,64 @@
+version: '3.4'
+
+services:
+  proxy:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+     - '4000:4000'
+    depends_on: 
+     - "api"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    networks:
+     - boilerplate-network
+
+  api:
+    container_name: boilerplate.api
+    image: ${DOCKER_REGISTRY-}api
+    build:
+      context: .
+      dockerfile: Api/Dockerfile
+    expose:
+     - "5000"
+    depends_on:
+     - "postgres"
+    env_file:
+     - .env
+    networks:
+      - boilerplate-network
+
+  postgres:
+    image: postgres:latest
+    container_name: boilerplate.postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - '5432:5432'
+    volumes: 
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    networks:
+      - boilerplate-network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    restart: always
+    logging:
+      driver: 'none'
+    ports:
+      - 1025:1025
+      - 8025:8025
+    networks:
+      - boilerplate-network
+
+volumes:
+  postgres_data:
+
+networks:
+  boilerplate-network:
+    driver: bridge
